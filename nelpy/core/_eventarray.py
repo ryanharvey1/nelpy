@@ -180,12 +180,8 @@ class BaseEventArray(ABC):
     @abstractmethod
     @keyword_equivalence(this_or_that={"n_intervals": "n_epochs"})
     def partition(self, ds=None, n_intervals=None):
-        """Returns a BaseEventArray whose support has been partitioned.
-
-        # Regardless of whether 'ds' or 'n_intervals' are used, the exact
-        # underlying support is propagated, and the first and last points
-        # of the supports are always included, even if this would cause
-        # n_points or ds to be violated.
+        """
+        Returns a BaseEventArray whose support has been partitioned.
 
         Parameters
         ----------
@@ -199,6 +195,13 @@ class BaseEventArray(ABC):
         -------
         out : BaseEventArray
             BaseEventArray that has been partitioned.
+
+        Notes
+        -----
+        Irrespective of whether 'ds' or 'n_intervals' are used, the exact
+        underlying support is propagated, and the first and last points
+        of the supports are always included, even if this would cause
+        n_points or ds to be violated.
         """
         return
 
@@ -709,16 +712,14 @@ class EventArray(BaseEventArray):
             series_label = "flattened"
 
         flattened = self._copy_without_data()
-
         flattened._series_ids = [series_id]
         flattened._series_labels = [series_label]
         flattened._series_tags = None
 
-        alldatas = self.data[0]
-        for series in range(1, self.n_series):
-            alldatas = utils.linear_merge(alldatas, self.data[series])
-
-        flattened._data = np.array(list(alldatas), ndmin=2)
+        # Efficient: concatenate all events, sort once
+        all_events = np.concatenate(self.data)
+        all_events.sort()
+        flattened._data = np.array([all_events], ndmin=2)
         flattened.__renew__()
         return flattened
 
